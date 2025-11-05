@@ -3,8 +3,8 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Info } from "lucide-react";
 
 const Maps = () => {
-  // Google Maps embed with multiple markers for Indian destinations
-  const mapSrc = "https://www.google.com/maps/d/embed?mid=1_wSSKHzo_P3VnNRfQE7KXxUWHuQhKDE&ehbc=2E312F";
+  // Google Maps embed centered on India with key destinations
+  const mapSrc = "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d7899174.749277804!2d73.0!3d22.0!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x30635ff06b92b791%3A0xd78c4fa1854213a6!2sIndia!5e0!3m2!1sen!2sin!4v1234567890";
 
   return (
     <div className="min-h-screen py-12">
