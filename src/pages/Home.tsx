@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { MapPin, MessageCircle, Phone, Landmark, Plane, Shield } from "lucide-react";
+import InteractiveBackground from "@/components/InteractiveBackground";
 
 const Home = () => {
   const features = [
@@ -26,7 +27,8 @@ const Home = () => {
   ];
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen relative">
+      <InteractiveBackground />
       {/* Hero Section */}
       <section className="relative h-[600px] flex items-center justify-center overflow-hidden">
         {/* Background with gradient overlay */}
