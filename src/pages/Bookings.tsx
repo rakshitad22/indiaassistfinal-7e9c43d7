@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calendar, Car, Hotel, Users } from "lucide-react";
+import { Calendar, Car, Hotel, Users, Plane } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
   Dialog,
@@ -15,16 +15,18 @@ import {
 } from "@/components/ui/dialog";
 
 const Bookings = () => {
-  const [bookingType, setBookingType] = useState<"hotel" | "cab">("hotel");
+  const [bookingType, setBookingType] = useState<"hotel" | "cab" | "flight">("hotel");
   const [showSummary, setShowSummary] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     phone: "",
     date: "",
+    returnDate: "",
     destination: "",
     pickup: "",
     guests: "1",
+    class: "economy",
   });
   const { toast } = useToast();
 
@@ -73,9 +75,11 @@ const Bookings = () => {
       email: "",
       phone: "",
       date: "",
+      returnDate: "",
       destination: "",
       pickup: "",
       guests: "1",
+      class: "economy",
     });
   };
 
@@ -85,7 +89,7 @@ const Bookings = () => {
         <div className="text-center mb-8">
           <h1 className="text-5xl font-bold mb-4">Book Your Experience</h1>
           <p className="text-xl text-muted-foreground">
-            Reserve hotels and cabs for your India journey
+            Reserve hotels, flights, and cabs for your India journey
           </p>
         </div>
 
@@ -94,6 +98,8 @@ const Bookings = () => {
             <CardTitle className="flex items-center gap-2">
               {bookingType === "hotel" ? (
                 <Hotel className="h-5 w-5 text-primary" />
+              ) : bookingType === "flight" ? (
+                <Plane className="h-5 w-5 text-primary" />
               ) : (
                 <Car className="h-5 w-5 text-primary" />
               )}
@@ -103,7 +109,7 @@ const Bookings = () => {
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
               {/* Booking Type Selection */}
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-3 gap-4">
                 <Button
                   type="button"
                   variant={bookingType === "hotel" ? "default" : "outline"}
@@ -113,6 +119,17 @@ const Bookings = () => {
                   <div className="flex flex-col items-center gap-2">
                     <Hotel className="h-6 w-6" />
                     <span>Hotel</span>
+                  </div>
+                </Button>
+                <Button
+                  type="button"
+                  variant={bookingType === "flight" ? "default" : "outline"}
+                  onClick={() => setBookingType("flight")}
+                  className="h-20"
+                >
+                  <div className="flex flex-col items-center gap-2">
+                    <Plane className="h-6 w-6" />
+                    <span>Flight</span>
                   </div>
                 </Button>
                 <Button
@@ -174,7 +191,7 @@ const Bookings = () => {
                   <div className="space-y-2">
                     <Label htmlFor="date">
                       <Calendar className="h-4 w-4 inline mr-1" />
-                      {bookingType === "hotel" ? "Check-in Date *" : "Pickup Date *"}
+                      {bookingType === "hotel" ? "Check-in Date *" : bookingType === "flight" ? "Departure Date *" : "Pickup Date *"}
                     </Label>
                     <Input
                       id="date"
@@ -184,6 +201,20 @@ const Bookings = () => {
                       required
                     />
                   </div>
+                  {bookingType === "flight" && (
+                    <div className="space-y-2">
+                      <Label htmlFor="returnDate">
+                        <Calendar className="h-4 w-4 inline mr-1" />
+                        Return Date
+                      </Label>
+                      <Input
+                        id="returnDate"
+                        type="date"
+                        value={formData.returnDate}
+                        onChange={(e) => setFormData({ ...formData, returnDate: e.target.value })}
+                      />
+                    </div>
+                  )}
                   <div className="space-y-2">
                     <Label htmlFor="guests">
                       <Users className="h-4 w-4 inline mr-1" />
@@ -204,6 +235,23 @@ const Bookings = () => {
                   </div>
                 </div>
 
+                {bookingType === "flight" && (
+                  <div className="space-y-2">
+                    <Label htmlFor="class">Flight Class</Label>
+                    <Select value={formData.class} onValueChange={(value) => setFormData({ ...formData, class: value })}>
+                      <SelectTrigger id="class">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="economy">Economy</SelectItem>
+                        <SelectItem value="premium">Premium Economy</SelectItem>
+                        <SelectItem value="business">Business Class</SelectItem>
+                        <SelectItem value="first">First Class</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
                 {bookingType === "cab" && (
                   <div className="space-y-2">
                     <Label htmlFor="pickup">Pickup Location *</Label>
@@ -217,9 +265,22 @@ const Bookings = () => {
                   </div>
                 )}
 
+                {bookingType === "flight" && (
+                  <div className="space-y-2">
+                    <Label htmlFor="pickup">From (City/Airport) *</Label>
+                    <Input
+                      id="pickup"
+                      placeholder="Enter departure city"
+                      value={formData.pickup}
+                      onChange={(e) => setFormData({ ...formData, pickup: e.target.value })}
+                      required={bookingType === "flight"}
+                    />
+                  </div>
+                )}
+
                 <div className="space-y-2">
                   <Label htmlFor="destination">
-                    {bookingType === "hotel" ? "Destination *" : "Drop-off Location *"}
+                    {bookingType === "hotel" ? "Destination *" : bookingType === "flight" ? "To (City/Airport) *" : "Drop-off Location *"}
                   </Label>
                   <Select value={formData.destination} onValueChange={(value) => setFormData({ ...formData, destination: value })}>
                     <SelectTrigger id="destination">
@@ -270,21 +331,33 @@ const Bookings = () => {
                 <span>{formData.phone}</span>
               </div>
               <div className="flex justify-between">
-                <span className="font-medium">Date:</span>
+                <span className="font-medium">{bookingType === "flight" ? "Departure Date:" : "Date:"}</span>
                 <span>{formData.date}</span>
               </div>
+              {bookingType === "flight" && formData.returnDate && (
+                <div className="flex justify-between">
+                  <span className="font-medium">Return Date:</span>
+                  <span>{formData.returnDate}</span>
+                </div>
+              )}
               <div className="flex justify-between">
                 <span className="font-medium">{bookingType === "hotel" ? "Guests" : "Passengers"}:</span>
                 <span>{formData.guests}</span>
               </div>
-              {bookingType === "cab" && (
+              {bookingType === "flight" && (
                 <div className="flex justify-between">
-                  <span className="font-medium">Pickup:</span>
+                  <span className="font-medium">Class:</span>
+                  <span className="capitalize">{formData.class}</span>
+                </div>
+              )}
+              {(bookingType === "cab" || bookingType === "flight") && (
+                <div className="flex justify-between">
+                  <span className="font-medium">{bookingType === "flight" ? "From:" : "Pickup:"}</span>
                   <span>{formData.pickup}</span>
                 </div>
               )}
               <div className="flex justify-between">
-                <span className="font-medium">Destination:</span>
+                <span className="font-medium">{bookingType === "flight" ? "To:" : "Destination:"}</span>
                 <span>{formData.destination}</span>
               </div>
               <div className="pt-4 border-t">
