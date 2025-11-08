@@ -9,6 +9,7 @@ import Destinations from "./pages/Destinations";
 import Maps from "./pages/Maps";
 import Gallery from "./pages/Gallery";
 import Blog from "./pages/Blog";
+import TripPlanner from "./pages/TripPlanner";
 import Currency from "./pages/Currency";
 import Chat from "./pages/Chat";
 import Bookings from "./pages/Bookings";
@@ -33,6 +34,7 @@ const App = () => (
               <Route path="/maps" element={<Maps />} />
               <Route path="/gallery" element={<Gallery />} />
               <Route path="/blog" element={<Blog />} />
+              <Route path="/trip-planner" element={<TripPlanner />} />
               <Route path="/currency" element={<Currency />} />
               <Route path="/chat" element={<Chat />} />
               <Route path="/bookings" element={<Bookings />} />

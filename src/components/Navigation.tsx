@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Menu, X, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import LanguageTranslator from "./LanguageTranslator";
 
 const Navigation = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -13,6 +14,7 @@ const Navigation = () => {
     { to: "/maps", label: "Maps" },
     { to: "/gallery", label: "Gallery" },
     { to: "/blog", label: "Blog" },
+    { to: "/trip-planner", label: "Trip Planner" },
     { to: "/currency", label: "Currency" },
     { to: "/chat", label: "Travel Buddy" },
     { to: "/bookings", label: "Bookings" },
@@ -45,6 +47,7 @@ const Navigation = () => {
                 </Button>
               </Link>
             ))}
+            <LanguageTranslator />
           </div>
 
           {/* Mobile Menu Button */}
@@ -70,6 +73,9 @@ const Navigation = () => {
                   </Button>
                 </Link>
               ))}
+              <div className="px-2 pt-2">
+                <LanguageTranslator />
+              </div>
             </div>
           </div>
         )}

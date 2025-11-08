@@ -23,10 +23,26 @@ export default {
           DEFAULT: "hsl(var(--primary))",
           foreground: "hsl(var(--primary-foreground))",
         },
-        saffron: {
-          DEFAULT: "hsl(var(--saffron))",
-          foreground: "hsl(var(--saffron-foreground))",
-        },
+			saffron: {
+				DEFAULT: "hsl(var(--saffron))",
+				foreground: "hsl(var(--saffron-foreground))",
+			},
+			emerald: {
+				DEFAULT: "hsl(var(--emerald))",
+				foreground: "hsl(var(--emerald-foreground))",
+			},
+			purple: {
+				DEFAULT: "hsl(var(--purple))",
+				foreground: "hsl(var(--purple-foreground))",
+			},
+			golden: {
+				DEFAULT: "hsl(var(--golden))",
+				foreground: "hsl(var(--golden-foreground))",
+			},
+			coral: {
+				DEFAULT: "hsl(var(--coral))",
+				foreground: "hsl(var(--coral-foreground))",
+			},
         secondary: {
           DEFAULT: "hsl(var(--secondary))",
           foreground: "hsl(var(--secondary-foreground))",

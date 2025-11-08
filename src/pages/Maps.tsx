@@ -1,258 +1,530 @@
 import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { MapPin, X } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { MapPin, Info } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import InteractiveBackground from "@/components/InteractiveBackground";
 
-interface TouristPlace {
-  name: string;
-  description: string;
-  category: string;
-}
-
-interface CityData {
-  name: string;
-  state: string;
-  description: string;
-  places: TouristPlace[];
-  mapUrl: string;
-}
+// Comprehensive list of Indian cities and tourist places
+const allIndianPlaces = {
+  // North India
+  Delhi: [
+    "Red Fort",
+    "Qutub Minar",
+    "India Gate",
+    "Lotus Temple",
+    "Humayun's Tomb",
+    "Akshardham Temple",
+    "Jama Masjid",
+    "Chandni Chowk",
+    "Raj Ghat",
+    "Lodhi Gardens",
+  ],
+  Agra: [
+    "Taj Mahal",
+    "Agra Fort",
+    "Fatehpur Sikri",
+    "Mehtab Bagh",
+    "Tomb of Itimad-ud-Daulah",
+    "Jama Masjid",
+    "Akbar's Tomb",
+  ],
+  Jaipur: [
+    "Amber Fort",
+    "Hawa Mahal",
+    "City Palace",
+    "Jantar Mantar",
+    "Jal Mahal",
+    "Nahargarh Fort",
+    "Albert Hall Museum",
+  ],
+  Udaipur: [
+    "City Palace",
+    "Lake Pichola",
+    "Jag Mandir",
+    "Sajjangarh Palace",
+    "Fateh Sagar Lake",
+    "Jagdish Temple",
+    "Saheliyon Ki Bari",
+  ],
+  Jodhpur: [
+    "Mehrangarh Fort",
+    "Umaid Bhawan Palace",
+    "Jaswant Thada",
+    "Clock Tower",
+    "Mandore Gardens",
+  ],
+  Jaisalmer: [
+    "Jaisalmer Fort",
+    "Sam Sand Dunes",
+    "Patwon Ki Haveli",
+    "Gadisar Lake",
+    "Bada Bagh",
+  ],
+  Amritsar: [
+    "Golden Temple",
+    "Wagah Border",
+    "Jallianwala Bagh",
+    "Partition Museum",
+    "Akal Takht",
+  ],
+  Shimla: [
+    "The Mall Road",
+    "Jakhu Temple",
+    "Christ Church",
+    "Kufri",
+    "Summer Hill",
+    "Scandal Point",
+  ],
+  Manali: [
+    "Rohtang Pass",
+    "Solang Valley",
+    "Hadimba Temple",
+    "Manu Temple",
+    "Old Manali",
+    "Vashisht Hot Springs",
+  ],
+  Dharamshala: [
+    "Dalai Lama Temple",
+    "Bhagsu Waterfall",
+    "McLeod Ganj",
+    "Triund Trek",
+    "Namgyal Monastery",
+  ],
+  Rishikesh: [
+    "Laxman Jhula",
+    "Ram Jhula",
+    "Beatles Ashram",
+    "Triveni Ghat",
+    "Neer Garh Waterfall",
+  ],
+  Haridwar: [
+    "Har Ki Pauri",
+    "Mansa Devi Temple",
+    "Chandi Devi Temple",
+    "Ganga Aarti",
+    "Maya Devi Temple",
+  ],
+  Varanasi: [
+    "Dashashwamedh Ghat",
+    "Kashi Vishwanath Temple",
+    "Sarnath",
+    "Assi Ghat",
+    "Ramnagar Fort",
+    "Manikarnika Ghat",
+  ],
+  Lucknow: [
+    "Bara Imambara",
+    "Chota Imambara",
+    "Rumi Darwaza",
+    "British Residency",
+    "Hazratganj",
+  ],
+  Chandigarh: [
+    "Rock Garden",
+    "Sukhna Lake",
+    "Rose Garden",
+    "Capitol Complex",
+    "Leisure Valley",
+  ],
+  // West India
+  Mumbai: [
+    "Gateway of India",
+    "Marine Drive",
+    "Elephanta Caves",
+    "Chhatrapati Shivaji Terminus",
+    "Siddhivinayak Temple",
+    "Haji Ali Dargah",
+    "Juhu Beach",
+    "Colaba Causeway",
+  ],
+  Pune: [
+    "Shaniwar Wada",
+    "Aga Khan Palace",
+    "Sinhagad Fort",
+    "Osho Ashram",
+    "Raja Dinkar Kelkar Museum",
+  ],
+  Aurangabad: [
+    "Ajanta Caves",
+    "Ellora Caves",
+    "Bibi Ka Maqbara",
+    "Daulatabad Fort",
+    "Grishneshwar Temple",
+  ],
+  Goa: [
+    "Baga Beach",
+    "Calangute Beach",
+    "Fort Aguada",
+    "Basilica of Bom Jesus",
+    "Dudhsagar Falls",
+    "Anjuna Beach",
+    "Chapora Fort",
+    "Palolem Beach",
+  ],
+  Ahmedabad: [
+    "Sabarmati Ashram",
+    "Adalaj Stepwell",
+    "Akshardham Temple",
+    "Kankaria Lake",
+    "Sidi Saiyyed Mosque",
+  ],
+  Surat: [
+    "Dumas Beach",
+    "Sarthana Nature Park",
+    "Dutch Garden",
+    "Surat Castle",
+    "Gopi Talav",
+  ],
+  Nashik: [
+    "Sula Vineyards",
+    "Trimbakeshwar Temple",
+    "Pandavleni Caves",
+    "Gangapur Dam",
+    "Kalaram Temple",
+  ],
+  // South India
+  Bangalore: [
+    "Lalbagh Botanical Garden",
+    "Cubbon Park",
+    "Bangalore Palace",
+    "ISKCON Temple",
+    "Tipu Sultan's Palace",
+    "Nandi Hills",
+  ],
+  Mysore: [
+    "Mysore Palace",
+    "Chamundi Hills",
+    "Brindavan Gardens",
+    "St. Philomena's Cathedral",
+    "Mysore Zoo",
+  ],
+  Chennai: [
+    "Marina Beach",
+    "Kapaleeshwarar Temple",
+    "Fort St. George",
+    "Mahabalipuram",
+    "San Thome Cathedral",
+  ],
+  Kochi: [
+    "Fort Kochi",
+    "Chinese Fishing Nets",
+    "Mattancherry Palace",
+    "Jewish Synagogue",
+    "Marine Drive",
+  ],
+  "Kerala Backwaters": [
+    "Alleppey Backwaters",
+    "Munnar Tea Gardens",
+    "Periyar Wildlife Sanctuary",
+    "Kovalam Beach",
+    "Varkala Beach",
+    "Athirapally Falls",
+  ],
+  Hyderabad: [
+    "Charminar",
+    "Golconda Fort",
+    "Ramoji Film City",
+    "Hussain Sagar Lake",
+    "Salar Jung Museum",
+    "Chowmahalla Palace",
+  ],
+  Visakhapatnam: [
+    "RK Beach",
+    "Araku Valley",
+    "Borra Caves",
+    "Kailasagiri",
+    "Submarine Museum",
+  ],
+  Hampi: [
+    "Virupaksha Temple",
+    "Vittala Temple",
+    "Stone Chariot",
+    "Lotus Mahal",
+    "Elephant Stables",
+  ],
+  Coorg: [
+    "Abbey Falls",
+    "Raja's Seat",
+    "Dubare Elephant Camp",
+    "Talacauvery",
+    "Madikeri Fort",
+  ],
+  Ooty: [
+    "Ooty Lake",
+    "Botanical Gardens",
+    "Doddabetta Peak",
+    "Nilgiri Mountain Railway",
+    "Rose Garden",
+  ],
+  Pondicherry: [
+    "Promenade Beach",
+    "Auroville",
+    "Sri Aurobindo Ashram",
+    "Paradise Beach",
+    "French Quarter",
+  ],
+  Madurai: [
+    "Meenakshi Temple",
+    "Thirumalai Nayakkar Palace",
+    "Gandhi Memorial Museum",
+    "Alagar Kovil",
+    "Vandiyur Mariamman Teppakulam",
+  ],
+  Trivandrum: [
+    "Padmanabhaswamy Temple",
+    "Kovalam Beach",
+    "Napier Museum",
+    "Shanghumukham Beach",
+    "Poovar Island",
+  ],
+  // East India
+  Kolkata: [
+    "Victoria Memorial",
+    "Howrah Bridge",
+    "Dakshineswar Temple",
+    "Indian Museum",
+    "Marble Palace",
+    "Science City",
+  ],
+  Darjeeling: [
+    "Tiger Hill",
+    "Darjeeling Himalayan Railway",
+    "Batasia Loop",
+    "Japanese Peace Pagoda",
+    "Happy Valley Tea Estate",
+  ],
+  Gangtok: [
+    "Tsomgo Lake",
+    "Rumtek Monastery",
+    "MG Marg",
+    "Nathula Pass",
+    "Banjhakri Falls",
+  ],
+  Puri: [
+    "Jagannath Temple",
+    "Puri Beach",
+    "Konark Sun Temple",
+    "Chilika Lake",
+    "Raghurajpur Village",
+  ],
+  Bhubaneswar: [
+    "Lingaraj Temple",
+    "Udayagiri Caves",
+    "Nandankanan Zoo",
+    "Dhauli Hill",
+    "Odisha State Museum",
+  ],
+  Kaziranga: [
+    "Kaziranga National Park",
+    "Elephant Safari",
+    "Jeep Safari",
+    "Orchid Park",
+  ],
+  Shillong: [
+    "Umiam Lake",
+    "Elephant Falls",
+    "Shillong Peak",
+    "Don Bosco Museum",
+    "Ward's Lake",
+  ],
+  Guwahati: [
+    "Kamakhya Temple",
+    "Brahmaputra River Cruise",
+    "Umananda Island",
+    "Assam State Museum",
+    "Pobitora Wildlife Sanctuary",
+  ],
+  Imphal: [
+    "Kangla Fort",
+    "Loktak Lake",
+    "Ima Keithel",
+    "Shri Govindajee Temple",
+    "War Cemetery",
+  ],
+  // Central India
+  Bhopal: [
+    "Upper Lake",
+    "Taj-ul-Masajid",
+    "Bhimbetka Caves",
+    "Van Vihar National Park",
+    "Sanchi Stupa",
+  ],
+  Khajuraho: [
+    "Khajuraho Temples",
+    "Kandariya Mahadev Temple",
+    "Lakshmana Temple",
+    "Light & Sound Show",
+  ],
+  Indore: [
+    "Rajwada Palace",
+    "Lal Bagh Palace",
+    "Sarafa Bazaar",
+    "Patalpani Waterfall",
+    "Mandu Fort",
+  ],
+  Gwalior: [
+    "Gwalior Fort",
+    "Jai Vilas Palace",
+    "Sas Bahu Temple",
+    "Teli Ka Mandir",
+    "Sun Temple",
+  ],
+  Ujjain: [
+    "Mahakaleshwar Temple",
+    "Ram Ghat",
+    "Kal Bhairav Temple",
+    "Vedh Shala Observatory",
+    "Sandipani Ashram",
+  ],
+  Jabalpur: [
+    "Dhuandhar Falls",
+    "Bhedaghat Marble Rocks",
+    "Madan Mahal Fort",
+    "Rani Durgavati Museum",
+    "Chausath Yogini Temple",
+  ],
+  Raipur: [
+    "Mahant Ghasidas Museum",
+    "Nandan Van Zoo",
+    "Marine Drive",
+    "Vivekananda Sarovar",
+    "Champaran",
+  ],
+  Ranchi: [
+    "Hundru Falls",
+    "Rock Garden",
+    "Tagore Hill",
+    "Jagannath Temple",
+    "Patratu Valley",
+  ],
+  Patna: [
+    "Golghar",
+    "Patna Museum",
+    "Mahavir Mandir",
+    "Gandhi Maidan",
+    "Kumhrar Archaeological Site",
+  ],
+};
 
 const Maps = () => {
   const [selectedCity, setSelectedCity] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
-  const cities: { [key: string]: CityData } = {
-    delhi: {
-      name: "Delhi",
-      state: "National Capital Territory",
-      description: "India's vibrant capital blending ancient heritage with modern development",
-      mapUrl: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d224345.83923192776!2d77.06889754725782!3d28.52758200617607!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x390cfd5b347eb62d%3A0x52c2b7494e204dce!2sNew%20Delhi%2C%20Delhi!5e0!3m2!1sen!2sin!4v1234567890",
-      places: [
-        { name: "Red Fort", description: "Historic 17th-century Mughal fort and UNESCO World Heritage Site", category: "Historical" },
-        { name: "India Gate", description: "War memorial and iconic landmark of Delhi", category: "Monument" },
-        { name: "Qutub Minar", description: "73m tall minaret, UNESCO World Heritage Site", category: "Historical" },
-        { name: "Lotus Temple", description: "Stunning Baháʼí House of Worship shaped like a lotus", category: "Religious" },
-        { name: "Humayun's Tomb", description: "Beautiful Mughal architecture and UNESCO site", category: "Historical" },
-        { name: "Akshardham Temple", description: "Modern architectural marvel with stunning exhibitions", category: "Religious" },
-        { name: "Chandni Chowk", description: "Historic market known for street food and shopping", category: "Shopping" },
-        { name: "Lodhi Garden", description: "Peaceful park with 15th-century monuments", category: "Nature" },
-      ]
-    },
-    agra: {
-      name: "Agra",
-      state: "Uttar Pradesh",
-      description: "Home to the iconic Taj Mahal and Mughal architectural wonders",
-      mapUrl: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d114315.21396693922!2d77.93744449726562!3d27.176670451076193!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x39740d857c2f41d9%3A0x784aef38a9523b42!2sAgra%2C%20Uttar%20Pradesh!5e0!3m2!1sen!2sin!4v1234567890",
-      places: [
-        { name: "Taj Mahal", description: "One of the Seven Wonders of the World, symbol of love", category: "Historical" },
-        { name: "Agra Fort", description: "UNESCO World Heritage Site, massive red sandstone fort", category: "Historical" },
-        { name: "Fatehpur Sikri", description: "Abandoned Mughal city, UNESCO World Heritage Site", category: "Historical" },
-        { name: "Mehtab Bagh", description: "Garden complex offering stunning Taj Mahal views", category: "Nature" },
-        { name: "Tomb of Itimad-ud-Daulah", description: "Often called 'Baby Taj', beautiful marble mausoleum", category: "Historical" },
-        { name: "Jama Masjid", description: "One of the largest mosques in India", category: "Religious" },
-      ]
-    },
-    jaipur: {
-      name: "Jaipur",
-      state: "Rajasthan",
-      description: "The Pink City known for magnificent palaces and vibrant culture",
-      mapUrl: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d227748.99971531832!2d75.62574254726562!3d26.92207084913089!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x396c4adf4c57e281%3A0xce1c63a0cf22e09!2sJaipur%2C%20Rajasthan!5e0!3m2!1sen!2sin!4v1234567890",
-      places: [
-        { name: "Hawa Mahal", description: "Iconic Palace of Winds with 953 windows", category: "Historical" },
-        { name: "Amber Fort", description: "Majestic hilltop fort with stunning architecture", category: "Historical" },
-        { name: "City Palace", description: "Royal residence with museums and courtyards", category: "Historical" },
-        { name: "Jantar Mantar", description: "UNESCO World Heritage astronomical observatory", category: "Historical" },
-        { name: "Nahargarh Fort", description: "Fort offering panoramic city views", category: "Historical" },
-        { name: "Jal Mahal", description: "Beautiful water palace in Man Sagar Lake", category: "Historical" },
-        { name: "Johari Bazaar", description: "Famous market for jewelry and textiles", category: "Shopping" },
-        { name: "Albert Hall Museum", description: "Oldest museum in Rajasthan", category: "Museum" },
-      ]
-    },
-    goa: {
-      name: "Goa",
-      state: "Goa",
-      description: "Beach paradise with Portuguese heritage and vibrant nightlife",
-      mapUrl: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d492512.3931734854!2d73.71929299726562!3d15.299326489130891!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3bbfba106336b741%3A0xeaf887ff62f34092!2sGoa!5e0!3m2!1sen!2sin!4v1234567890",
-      places: [
-        { name: "Baga Beach", description: "Popular beach with water sports and nightlife", category: "Beach" },
-        { name: "Basilica of Bom Jesus", description: "UNESCO World Heritage church from 1605", category: "Religious" },
-        { name: "Fort Aguada", description: "17th-century Portuguese fort overlooking the sea", category: "Historical" },
-        { name: "Dudhsagar Falls", description: "Four-tiered waterfall among India's tallest", category: "Nature" },
-        { name: "Anjuna Beach", description: "Known for flea markets and trance parties", category: "Beach" },
-        { name: "Palolem Beach", description: "Crescent-shaped beach perfect for relaxation", category: "Beach" },
-        { name: "Old Goa Churches", description: "Historic churches with Portuguese architecture", category: "Religious" },
-        { name: "Spice Plantations", description: "Tour aromatic spice farms and taste local cuisine", category: "Nature" },
-      ]
-    },
-    kerala: {
-      name: "Kerala",
-      state: "Kerala",
-      description: "God's Own Country with serene backwaters and lush greenery",
-      mapUrl: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2016488.828125!2d75.71929299726562!3d10.850516489130891!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3b0812ffd49cf55b%3A0x64bd90fbed387c99!2sKerala!5e0!3m2!1sen!2sin!4v1234567890",
-      places: [
-        { name: "Alleppey Backwaters", description: "Network of canals perfect for houseboat cruises", category: "Nature" },
-        { name: "Munnar", description: "Hill station with tea plantations and cool climate", category: "Nature" },
-        { name: "Periyar Wildlife Sanctuary", description: "Tiger reserve with elephant rides", category: "Wildlife" },
-        { name: "Kovalam Beach", description: "Crescent-shaped beaches with lighthouse", category: "Beach" },
-        { name: "Athirapally Falls", description: "Kerala's largest waterfall, 'Niagara of India'", category: "Nature" },
-        { name: "Fort Kochi", description: "Historic port town with colonial architecture", category: "Historical" },
-        { name: "Varkala Beach", description: "Cliff-top beach with natural springs", category: "Beach" },
-        { name: "Thekkady", description: "Spice plantations and wildlife sanctuary", category: "Nature" },
-      ]
-    },
-    varanasi: {
-      name: "Varanasi",
-      state: "Uttar Pradesh",
-      description: "One of the world's oldest cities and India's spiritual capital",
-      mapUrl: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d115316.37282619917!2d82.89479999726562!3d25.317645489130891!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x398e2db76febcf4d%3A0x41f2dd87beb1c616!2sVaranasi%2C%20Uttar%20Pradesh!5e0!3m2!1sen!2sin!4v1234567890",
-      places: [
-        { name: "Dashashwamedh Ghat", description: "Main ghat for spectacular Ganga Aarti ceremony", category: "Religious" },
-        { name: "Kashi Vishwanath Temple", description: "Most sacred Shiva temple in India", category: "Religious" },
-        { name: "Assi Ghat", description: "Southern ghat popular with pilgrims and tourists", category: "Religious" },
-        { name: "Sarnath", description: "Where Buddha gave his first sermon, Buddhist pilgrimage site", category: "Religious" },
-        { name: "Manikarnika Ghat", description: "Ancient cremation ghat on the Ganges", category: "Religious" },
-        { name: "Ramnagar Fort", description: "18th-century fort and museum", category: "Historical" },
-        { name: "Banaras Hindu University", description: "Asia's largest residential university with beautiful campus", category: "Educational" },
-      ]
-    },
-    mumbai: {
-      name: "Mumbai",
-      state: "Maharashtra",
-      description: "India's financial capital and the city of dreams",
-      mapUrl: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d241316.9933346581!2d72.74109999726562!3d19.076090489130891!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3be7c6306644edc1%3A0x5da4ed8f8d648c69!2sMumbai%2C%20Maharashtra!5e0!3m2!1sen!2sin!4v1234567890",
-      places: [
-        { name: "Gateway of India", description: "Iconic arch monument overlooking Arabian Sea", category: "Monument" },
-        { name: "Marine Drive", description: "Scenic promenade along the coast", category: "Nature" },
-        { name: "Elephanta Caves", description: "UNESCO World Heritage rock-cut cave temples", category: "Historical" },
-        { name: "Chhatrapati Shivaji Terminus", description: "UNESCO World Heritage Victorian Gothic railway station", category: "Historical" },
-        { name: "Haji Ali Dargah", description: "Mosque on an islet in Arabian Sea", category: "Religious" },
-        { name: "Siddhivinayak Temple", description: "Famous Ganesh temple", category: "Religious" },
-        { name: "Juhu Beach", description: "Popular beach with street food stalls", category: "Beach" },
-        { name: "Colaba Causeway", description: "Bustling market area for shopping", category: "Shopping" },
-      ]
-    },
-    udaipur: {
-      name: "Udaipur",
-      state: "Rajasthan",
-      description: "The City of Lakes with romantic palaces and stunning scenery",
-      mapUrl: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d115316.37282619917!2d73.68329999726562!3d24.585445489130891!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3967e56e5e0dbf8d%3A0x76d3d7bd5e8d7d5d!2sUdaipur%2C%20Rajasthan!5e0!3m2!1sen!2sin!4v1234567890",
-      places: [
-        { name: "City Palace", description: "Majestic palace complex overlooking Lake Pichola", category: "Historical" },
-        { name: "Lake Pichola", description: "Artificial lake with palace islands", category: "Nature" },
-        { name: "Jag Mandir", description: "Island palace in Lake Pichola", category: "Historical" },
-        { name: "Saheliyon Ki Bari", description: "Garden of maidens with fountains and pools", category: "Nature" },
-        { name: "Fateh Sagar Lake", description: "Beautiful artificial lake for boating", category: "Nature" },
-        { name: "Monsoon Palace", description: "Hilltop palace offering sunset views", category: "Historical" },
-        { name: "Jagdish Temple", description: "Large Hindu temple in Indo-Aryan style", category: "Religious" },
-      ]
-    }
-  };
+  const cities = Object.keys(allIndianPlaces);
 
-  const selectedCityData = selectedCity ? cities[selectedCity] : null;
+  const filteredCities = cities.filter((city) =>
+    city.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const places = selectedCity ? allIndianPlaces[selectedCity as keyof typeof allIndianPlaces] : [];
 
   return (
-    <div className="min-h-screen py-12">
-      <div className="container mx-auto px-4">
-        <div className="text-center mb-8">
-          <h1 className="text-5xl font-bold mb-4">Interactive India Map</h1>
-          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            Explore destinations across India - Click on any city to discover tourist places
-          </p>
-        </div>
+    <div className="min-h-screen relative">
+      <InteractiveBackground />
+      <div className="container mx-auto px-4 py-8 relative z-10">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-8">
+            <h1 className="text-4xl font-bold mb-4 text-gradient">
+              Explore India
+            </h1>
+            <p className="text-muted-foreground text-lg mb-6">
+              Click on any city to discover its famous tourist destinations
+            </p>
 
-        {/* City Selection Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
-          {Object.entries(cities).map(([key, city]) => (
-            <Button
-              key={key}
-              variant={selectedCity === key ? "default" : "outline"}
-              className="h-auto py-4 flex flex-col gap-1"
-              onClick={() => setSelectedCity(key)}
-            >
-              <MapPin className="h-5 w-5" />
-              <span className="font-bold">{city.name}</span>
-              <span className="text-xs opacity-80">{city.state}</span>
-            </Button>
-          ))}
-        </div>
+            {/* Search Bar */}
+            <div className="max-w-md mx-auto mb-6">
+              <Input
+                type="text"
+                placeholder="Search for a city..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full"
+              />
+            </div>
+          </div>
 
-        {/* Selected City Details */}
-        {selectedCityData ? (
-          <div className="space-y-6">
-            <Card className="shadow-lg-custom">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <MapPin className="h-6 w-6 text-primary" />
+          {/* Selected City Details */}
+          {selectedCity && (
+            <Card className="mb-8 shadow-lg-custom">
+              <CardContent className="p-6">
+                <div className="flex items-start justify-between mb-4">
                   <div>
-                    <div className="text-2xl text-gradient">{selectedCityData.name}</div>
-                    <div className="text-sm text-muted-foreground font-normal mt-1">
-                      {selectedCityData.description}
-                    </div>
+                    <h2 className="text-2xl font-bold flex items-center gap-2">
+                      <MapPin className="h-6 w-6 text-primary" />
+                      {selectedCity}
+                    </h2>
+                    <p className="text-muted-foreground mt-1">
+                      Top Tourist Attractions
+                    </p>
                   </div>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="rounded-lg overflow-hidden border-2 border-border mb-6">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setSelectedCity(null)}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+
+                <div className="grid md:grid-cols-2 gap-4 mb-6">
+                  {places.map((place, index) => (
+                    <div
+                      key={index}
+                      className="p-4 bg-gradient-to-br from-primary/5 to-accent/5 rounded-lg border border-border hover:shadow-card transition-smooth"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
+                          {index + 1}
+                        </div>
+                        <p className="font-medium">{place}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Embedded Google Map */}
+                <div className="rounded-lg overflow-hidden shadow-lg">
                   <iframe
-                    src={selectedCityData.mapUrl}
+                    title={`Map of ${selectedCity}`}
                     width="100%"
                     height="400"
                     style={{ border: 0 }}
-                    allowFullScreen
                     loading="lazy"
-                    referrerPolicy="no-referrer-when-downgrade"
-                    className="w-full"
-                  ></iframe>
-                </div>
-
-                <h3 className="text-xl font-bold mb-4">Top Tourist Places in {selectedCityData.name}</h3>
-                <div className="grid md:grid-cols-2 gap-4">
-                  {selectedCityData.places.map((place, index) => (
-                    <Card key={index} className="hover:shadow-card transition-smooth">
-                      <CardContent className="p-4">
-                        <div className="flex items-start justify-between gap-2 mb-2">
-                          <h4 className="font-bold text-primary">{place.name}</h4>
-                          <Badge variant="secondary" className="text-xs">
-                            {place.category}
-                          </Badge>
-                        </div>
-                        <p className="text-sm text-muted-foreground">{place.description}</p>
-                      </CardContent>
-                    </Card>
-                  ))}
+                    allowFullScreen
+                    src={`https://www.google.com/maps/embed/v1/place?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8&q=${encodeURIComponent(
+                      selectedCity + ", India"
+                    )}&zoom=12`}
+                  />
                 </div>
               </CardContent>
             </Card>
-          </div>
-        ) : (
-          <Card className="shadow-lg-custom">
-            <CardContent className="p-12 text-center">
-              <MapPin className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-2xl font-bold mb-2">Select a City to Explore</h3>
-              <p className="text-muted-foreground max-w-md mx-auto">
-                Click on any city above to view its location on the map and discover amazing tourist places
-              </p>
-            </CardContent>
-          </Card>
-        )}
+          )}
 
-        {/* Usage Info */}
-        <Card className="mt-8">
-          <CardContent className="p-6">
-            <div className="flex items-start gap-3">
-              <Info className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
-              <div>
-                <h3 className="font-bold text-lg mb-2">How to Use This Map</h3>
-                <ul className="space-y-2 text-muted-foreground">
-                  <li>• Click on any city button to view its location and tourist attractions</li>
-                  <li>• Explore the interactive Google Map for each city</li>
-                  <li>• View categorized tourist places with detailed descriptions</li>
-                  <li>• Use the map controls to zoom in/out and switch to street view</li>
-                </ul>
-              </div>
+          {/* Cities Grid */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+            {filteredCities.map((city) => (
+              <Button
+                key={city}
+                onClick={() => {
+                  setSelectedCity(city);
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                }}
+                variant={selectedCity === city ? "default" : "outline"}
+                className="h-auto py-4 flex flex-col items-center gap-2 transition-smooth hover:scale-105"
+              >
+                <MapPin className="h-5 w-5" />
+                <span className="text-sm font-medium">{city}</span>
+              </Button>
+            ))}
+          </div>
+
+          {filteredCities.length === 0 && (
+            <div className="text-center py-12">
+              <p className="text-muted-foreground">No cities found matching your search</p>
             </div>
-          </CardContent>
-        </Card>
+          )}
+        </div>
       </div>
     </div>
   );
