@@ -16,6 +16,7 @@ const Navigation = () => {
     { to: "/blog", label: "Blog" },
     { to: "/trip-planner", label: "Trip Planner" },
     { to: "/currency", label: "Currency" },
+    { to: "/translator", label: "Translator" },
     { to: "/chat", label: "Travel Buddy" },
     { to: "/bookings", label: "Bookings" },
     { to: "/emergency", label: "Emergency" },

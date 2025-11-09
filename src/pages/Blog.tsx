@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, User, Clock } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 const blogPosts = [
   {
@@ -66,6 +67,8 @@ const blogPosts = [
 ];
 
 const Blog = () => {
+  const navigate = useNavigate();
+
   return (
     <div className="min-h-screen py-12">
       <div className="container mx-auto px-4">
@@ -79,6 +82,7 @@ const Blog = () => {
             <Card
               key={post.id}
               className="overflow-hidden hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer group"
+              onClick={() => navigate(`/blog/${post.id}`)}
             >
               <div className="relative overflow-hidden">
                 <img

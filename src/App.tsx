@@ -17,6 +17,8 @@ import Bookings from "./pages/Bookings";
 import Emergency from "./pages/Emergency";
 import Contact from "./pages/Contact";
 import NotFound from "./pages/NotFound";
+import BlogPost from "./pages/BlogPost";
+import UniversalTranslator from "./components/UniversalTranslator";
 
 const queryClient = new QueryClient();
 
@@ -42,6 +44,8 @@ const App = () => (
                 <Route path="/bookings" element={<Bookings />} />
                 <Route path="/emergency" element={<Emergency />} />
                 <Route path="/contact" element={<Contact />} />
+                <Route path="/blog/:id" element={<BlogPost />} />
+                <Route path="/translator" element={<UniversalTranslator />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </main>
