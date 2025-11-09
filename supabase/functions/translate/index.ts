@@ -26,21 +26,33 @@ serve(async (req) => {
       'pa': 'Punjabi',
     };
 
-    const response = await fetch('https://eimvamiqecfvyywrfvlh.supabase.co/functions/v1/lovable-ai', {
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+
+    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
+        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        prompt: `Translate the following text to ${languageNames[targetLanguage] || targetLanguage}. Only return the translated text, nothing else:\n\n${text}`,
-        model: 'openai/gpt-5-mini',
+        model: 'google/gemini-2.5-flash',
+        messages: [
+          { role: 'user', content: `Translate the following text to ${languageNames[targetLanguage] || targetLanguage}. Only return the translated text, nothing else:\n\n${text}` }
+        ],
       }),
     });
 
+
+    if (!response.ok) {
+      throw new Error(`AI API error: ${response.status}`);
+    }
+
     const data = await response.json();
+    const translation = data.choices?.[0]?.message?.content || text;
     
     return new Response(
-      JSON.stringify({ translation: data.response }),
+      JSON.stringify({ translation }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
