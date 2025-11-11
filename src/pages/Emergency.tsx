@@ -61,8 +61,22 @@ const Emergency = () => {
     });
   };
 
-  const callNumber = (number: string) => {
-    window.location.href = `tel:${number}`;
+  const callNumber = (number: string, service: string) => {
+    // Demo call functionality
+    toast({
+      title: "📞 Calling...",
+      description: `Connecting to ${service} (${number})`,
+      duration: 3000,
+    });
+    
+    // Simulate call in progress
+    setTimeout(() => {
+      toast({
+        title: "✅ Demo Call Active",
+        description: `This is a demo call to ${service}. In a real scenario, you would be connected to ${number}.`,
+        duration: 5000,
+      });
+    }, 2000);
   };
 
   return (
@@ -97,7 +111,7 @@ const Emergency = () => {
                     <div className="text-3xl font-bold text-primary mb-3">{item.number}</div>
                     <div className="flex gap-2">
                       <Button
-                        onClick={() => callNumber(item.number)}
+                        onClick={() => callNumber(item.number, item.service)}
                         className="flex-1 gap-2"
                         variant="default"
                       >
@@ -149,7 +163,7 @@ const Emergency = () => {
                         </div>
                         <div className="flex gap-2">
                           <Button
-                            onClick={() => callNumber(embassy.phone)}
+                            onClick={() => callNumber(embassy.phone, `${embassy.country} Embassy`)}
                             variant="outline"
                             className="flex-1 justify-start"
                           >
