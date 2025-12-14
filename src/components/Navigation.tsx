@@ -1,12 +1,22 @@
 import { useState } from "react";
-import { Link, useLocation } from "react-router-dom";
-import { Menu, X, MapPin } from "lucide-react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Menu, X, MapPin, LogIn, LogOut, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/hooks/useAuth";
 import LanguageTranslator from "./LanguageTranslator";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { toast } from "sonner";
 
 const Navigation = () => {
   const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
+  const { user, signOut, isLoading } = useAuth();
 
   const links = [
     { to: "/", label: "Home" },
@@ -23,6 +33,12 @@ const Navigation = () => {
   ];
 
   const isActive = (path: string) => location.pathname === path;
+
+  const handleSignOut = async () => {
+    await signOut();
+    toast.success("Signed out successfully");
+    navigate("/");
+  };
 
   return (
     <nav className="sticky top-0 z-50 bg-background/95 backdrop-blur-sm border-b shadow-sm">
@@ -48,6 +64,33 @@ const Navigation = () => {
               </Link>
             ))}
             <LanguageTranslator />
+            
+            {/* Auth Button */}
+            {!isLoading && (
+              user ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" className="ml-2">
+                      <User className="h-4 w-4 mr-2" />
+                      {user.email?.split('@')[0]}
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={handleSignOut}>
+                      <LogOut className="h-4 w-4 mr-2" />
+                      Sign Out
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : (
+                <Link to="/auth">
+                  <Button variant="default" size="sm" className="ml-2">
+                    <LogIn className="h-4 w-4 mr-2" />
+                    Login
+                  </Button>
+                </Link>
+              )
+            )}
           </div>
 
           {/* Mobile Menu Button */}
@@ -76,6 +119,30 @@ const Navigation = () => {
               <div className="px-2 pt-2">
                 <LanguageTranslator />
               </div>
+              
+              {/* Mobile Auth Button */}
+              {!isLoading && (
+                user ? (
+                  <Button 
+                    variant="outline" 
+                    className="w-full justify-start mt-2"
+                    onClick={() => {
+                      handleSignOut();
+                      setIsOpen(false);
+                    }}
+                  >
+                    <LogOut className="h-4 w-4 mr-2" />
+                    Sign Out ({user.email?.split('@')[0]})
+                  </Button>
+                ) : (
+                  <Link to="/auth" onClick={() => setIsOpen(false)}>
+                    <Button variant="default" className="w-full justify-start mt-2">
+                      <LogIn className="h-4 w-4 mr-2" />
+                      Login / Sign Up
+                    </Button>
+                  </Link>
+                )
+              )}
             </div>
           </div>
         )}
