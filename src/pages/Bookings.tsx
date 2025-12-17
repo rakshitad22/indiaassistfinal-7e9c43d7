@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calendar, Car, Hotel, Users, Plane, CheckCircle, Download, Printer, Wifi, Waves, Dumbbell, Sparkles, Utensils, Star, Image as ImageIcon, ChevronLeft, ChevronRight } from "lucide-react";
+import { Calendar, Car, Hotel, Users, Plane, CheckCircle, Download, Printer, Wifi, Waves, Dumbbell, Sparkles, Utensils, Star, Image as ImageIcon, ChevronLeft, ChevronRight, Search, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -15,6 +15,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { useRealBookings, RealHotel, RealFlight } from "@/hooks/useRealBookings";
 
 interface Booking {
   id: string;
@@ -826,6 +827,10 @@ const Bookings = () => {
   const [showGallery, setShowGallery] = useState(false);
   const [galleryHotel, setGalleryHotel] = useState<HotelData | null>(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [showRealResults, setShowRealResults] = useState(false);
+  const [selectedRealHotel, setSelectedRealHotel] = useState<RealHotel | null>(null);
+  const [selectedRealFlight, setSelectedRealFlight] = useState<RealFlight | null>(null);
+  const [checkOutDate, setCheckOutDate] = useState("");
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -841,6 +846,17 @@ const Bookings = () => {
     distance: "10",
   });
   const { toast } = useToast();
+  
+  const {
+    isSearchingHotels,
+    isSearchingFlights,
+    realHotels,
+    realFlights,
+    searchRealHotels,
+    searchRealFlights,
+    formatDuration,
+    formatDateTime,
+  } = useRealBookings();
 
   const cities = Object.keys(hotelOptions);
   
@@ -887,6 +903,95 @@ const Bookings = () => {
       setSavedBookings(JSON.parse(saved));
     }
   }, []);
+
+  // Airport code mapping for Indian cities
+  const cityToAirportCode: Record<string, string> = {
+    "Delhi": "DEL",
+    "Mumbai": "BOM",
+    "Bangalore": "BLR",
+    "Chennai": "MAA",
+    "Kolkata": "CCU",
+    "Hyderabad": "HYD",
+    "Goa": "GOI",
+    "Jaipur": "JAI",
+    "Pune": "PNQ",
+    "Ahmedabad": "AMD",
+    "Kochi": "COK",
+    "Lucknow": "LKO",
+    "Amritsar": "ATQ",
+    "Varanasi": "VNS",
+    "Udaipur": "UDR",
+    "Agra": "AGR",
+    "Mysore": "MYQ",
+  };
+
+  const handleSearchRealHotels = async () => {
+    if (!selectedCity || !formData.date || !checkOutDate) {
+      toast({
+        title: "Missing Information",
+        description: "Please select a city and dates to search for hotels",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    setShowRealResults(true);
+    await searchRealHotels(
+      selectedCity,
+      formData.date,
+      checkOutDate,
+      parseInt(formData.guests),
+      1
+    );
+  };
+
+  const handleSearchRealFlights = async () => {
+    if (!formData.pickup || !formData.destination || !formData.date) {
+      toast({
+        title: "Missing Information",
+        description: "Please select origin, destination and date to search for flights",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    const originCode = cityToAirportCode[formData.pickup] || formData.pickup;
+    const destCode = cityToAirportCode[formData.destination] || formData.destination;
+    const travelClass = formData.class.toUpperCase() === "ECONOMY" ? "ECONOMY" : 
+                        formData.class.toUpperCase() === "PREMIUM" ? "PREMIUM_ECONOMY" :
+                        formData.class.toUpperCase() === "BUSINESS" ? "BUSINESS" : "FIRST";
+    
+    setShowRealResults(true);
+    await searchRealFlights(
+      originCode,
+      destCode,
+      formData.date,
+      formData.returnDate || undefined,
+      parseInt(formData.guests),
+      travelClass
+    );
+  };
+
+  const selectRealHotel = (hotel: RealHotel) => {
+    setSelectedRealHotel(hotel);
+    setFormData({ 
+      ...formData, 
+      hotel: hotel.name, 
+      destination: selectedCity 
+    });
+    toast({
+      title: "Hotel Selected",
+      description: `${hotel.name} - ${hotel.currency} ${hotel.price}`,
+    });
+  };
+
+  const selectRealFlight = (flight: RealFlight) => {
+    setSelectedRealFlight(flight);
+    toast({
+      title: "Flight Selected",
+      description: `${flight.airline} - ${flight.currency} ${flight.price}`,
+    });
+  };
 
   const generateBookingId = () => {
     return `BK${Date.now().toString().slice(-8)}`;
@@ -1326,14 +1431,19 @@ For support: support@indiaassist.com | +91 1800-123-4567
                 {bookingType === "flight" && (
                   <>
                     <div className="space-y-2">
-                      <Label htmlFor="pickup">From (City/Airport) *</Label>
-                      <Input
-                        id="pickup"
-                        placeholder="Enter departure city"
-                        value={formData.pickup}
-                        onChange={(e) => setFormData({ ...formData, pickup: e.target.value })}
-                        required
-                      />
+                      <Label htmlFor="pickup">From (City) *</Label>
+                      <Select value={formData.pickup} onValueChange={(value) => setFormData({ ...formData, pickup: value })}>
+                        <SelectTrigger id="pickup">
+                          <SelectValue placeholder="Select departure city" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-background z-50">
+                          {cities.map((city) => (
+                            <SelectItem key={city} value={city}>
+                              {city}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="class">Flight Class *</Label>
@@ -1367,6 +1477,21 @@ For support: support@indiaassist.com | +91 1800-123-4567
                       required
                     />
                   </div>
+                  {bookingType === "hotel" && (
+                    <div className="space-y-2">
+                      <Label htmlFor="checkOutDate">
+                        <Calendar className="h-4 w-4 inline mr-1" />
+                        Check-out Date *
+                      </Label>
+                      <Input
+                        id="checkOutDate"
+                        type="date"
+                        value={checkOutDate}
+                        onChange={(e) => setCheckOutDate(e.target.value)}
+                        required
+                      />
+                    </div>
+                  )}
                   {bookingType === "flight" && (
                     <div className="space-y-2">
                       <Label htmlFor="returnDate">Return Date</Label>
@@ -1379,6 +1504,188 @@ For support: support@indiaassist.com | +91 1800-123-4567
                     </div>
                   )}
                 </div>
+
+                {/* Real API Search Button */}
+                {(bookingType === "hotel" || bookingType === "flight") && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full"
+                    onClick={bookingType === "hotel" ? handleSearchRealHotels : handleSearchRealFlights}
+                    disabled={isSearchingHotels || isSearchingFlights}
+                  >
+                    {(isSearchingHotels || isSearchingFlights) ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Searching Live Availability...
+                      </>
+                    ) : (
+                      <>
+                        <Search className="h-4 w-4 mr-2" />
+                        Search Live {bookingType === "hotel" ? "Hotels" : "Flights"} (Amadeus API)
+                      </>
+                    )}
+                  </Button>
+                )}
+
+                {/* Real Hotel Results */}
+                {bookingType === "hotel" && showRealResults && realHotels.length > 0 && (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-lg font-semibold">Live Hotel Results ({realHotels.length})</Label>
+                      <Badge variant="secondary" className="bg-green-100 text-green-800">
+                        Real-time from Amadeus
+                      </Badge>
+                    </div>
+                    <div className="grid gap-4 max-h-[400px] overflow-y-auto pr-2">
+                      {realHotels.map((hotel) => (
+                        <Card 
+                          key={hotel.id}
+                          className={`cursor-pointer transition-all hover:shadow-md ${
+                            selectedRealHotel?.id === hotel.id ? 'ring-2 ring-primary' : ''
+                          }`}
+                          onClick={() => selectRealHotel(hotel)}
+                        >
+                          <CardContent className="p-4">
+                            <div className="flex justify-between items-start mb-2">
+                              <div>
+                                <h4 className="font-semibold text-lg">{hotel.name}</h4>
+                                <p className="text-sm text-muted-foreground">{hotel.address}</p>
+                                <div className="flex items-center gap-1 mt-1">
+                                  {Array.from({ length: Math.round(hotel.rating) }).map((_, i) => (
+                                    <Star key={i} className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                                  ))}
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                <p className="text-2xl font-bold text-primary">
+                                  {hotel.currency} {hotel.price.toLocaleString()}
+                                </p>
+                                <p className="text-sm text-muted-foreground">{hotel.roomType}</p>
+                                {hotel.isRealBooking && (
+                                  <Badge className="mt-1 bg-green-500">Live</Badge>
+                                )}
+                              </div>
+                            </div>
+                            {hotel.description && (
+                              <p className="text-sm text-muted-foreground mt-2">{hotel.description}</p>
+                            )}
+                            {hotel.amenities.length > 0 && (
+                              <div className="flex flex-wrap gap-1 mt-2">
+                                {hotel.amenities.slice(0, 5).map((amenity) => (
+                                  <Badge key={amenity} variant="outline" className="text-xs">
+                                    {amenity}
+                                  </Badge>
+                                ))}
+                              </div>
+                            )}
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Real Flight Results */}
+                {bookingType === "flight" && showRealResults && realFlights.length > 0 && (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-lg font-semibold">Live Flight Results ({realFlights.length})</Label>
+                      <Badge variant="secondary" className="bg-green-100 text-green-800">
+                        Real-time from Amadeus
+                      </Badge>
+                    </div>
+                    <div className="grid gap-4 max-h-[400px] overflow-y-auto pr-2">
+                      {realFlights.map((flight) => (
+                        <Card 
+                          key={flight.id}
+                          className={`cursor-pointer transition-all hover:shadow-md ${
+                            selectedRealFlight?.id === flight.id ? 'ring-2 ring-primary' : ''
+                          }`}
+                          onClick={() => selectRealFlight(flight)}
+                        >
+                          <CardContent className="p-4">
+                            <div className="flex justify-between items-start mb-3">
+                              <div>
+                                <h4 className="font-semibold text-lg">{flight.airline}</h4>
+                                <Badge variant="outline">{flight.travelClass}</Badge>
+                              </div>
+                              <div className="text-right">
+                                <p className="text-2xl font-bold text-primary">
+                                  {flight.currency} {flight.price.toLocaleString()}
+                                </p>
+                                <p className="text-sm text-muted-foreground">
+                                  {flight.seatsAvailable} seats left
+                                </p>
+                                {flight.isRealBooking && (
+                                  <Badge className="mt-1 bg-green-500">Live</Badge>
+                                )}
+                              </div>
+                            </div>
+                            
+                            {/* Outbound Flight */}
+                            <div className="border rounded-lg p-3 mb-2">
+                              <div className="flex items-center justify-between">
+                                <div className="text-center">
+                                  <p className="font-semibold">{flight.outbound.departure}</p>
+                                  <p className="text-sm text-muted-foreground">
+                                    {formatDateTime(flight.outbound.departureTime)}
+                                  </p>
+                                </div>
+                                <div className="flex-1 px-4">
+                                  <div className="flex items-center justify-center gap-2">
+                                    <div className="h-px bg-border flex-1"></div>
+                                    <Plane className="h-4 w-4 text-primary" />
+                                    <div className="h-px bg-border flex-1"></div>
+                                  </div>
+                                  <p className="text-xs text-center text-muted-foreground">
+                                    {formatDuration(flight.outbound.duration)} • {flight.outbound.stops === 0 ? 'Direct' : `${flight.outbound.stops} stop(s)`}
+                                  </p>
+                                </div>
+                                <div className="text-center">
+                                  <p className="font-semibold">{flight.outbound.arrival}</p>
+                                  <p className="text-sm text-muted-foreground">
+                                    {formatDateTime(flight.outbound.arrivalTime)}
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                            
+                            {/* Inbound Flight */}
+                            {flight.inbound && (
+                              <div className="border rounded-lg p-3">
+                                <div className="flex items-center justify-between">
+                                  <div className="text-center">
+                                    <p className="font-semibold">{flight.inbound.departure}</p>
+                                    <p className="text-sm text-muted-foreground">
+                                      {formatDateTime(flight.inbound.departureTime)}
+                                    </p>
+                                  </div>
+                                  <div className="flex-1 px-4">
+                                    <div className="flex items-center justify-center gap-2">
+                                      <div className="h-px bg-border flex-1"></div>
+                                      <Plane className="h-4 w-4 text-primary rotate-180" />
+                                      <div className="h-px bg-border flex-1"></div>
+                                    </div>
+                                    <p className="text-xs text-center text-muted-foreground">
+                                      {formatDuration(flight.inbound.duration)} • {flight.inbound.stops === 0 ? 'Direct' : `${flight.inbound.stops} stop(s)`}
+                                    </p>
+                                  </div>
+                                  <div className="text-center">
+                                    <p className="font-semibold">{flight.inbound.arrival}</p>
+                                    <p className="text-sm text-muted-foreground">
+                                      {formatDateTime(flight.inbound.arrivalTime)}
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 <div className="space-y-2">
                   <Label htmlFor="guests">

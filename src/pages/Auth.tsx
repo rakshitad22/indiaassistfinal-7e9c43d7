@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { User, Mail, Lock, Plane } from "lucide-react";
+import { User, Mail, Lock, Plane, Phone } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import InteractiveBackground from "@/components/InteractiveBackground";
 
@@ -21,10 +21,15 @@ const Auth = () => {
   const [isTwitterLoading, setIsTwitterLoading] = useState(false);
   const [isAppleLoading, setIsAppleLoading] = useState(false);
   const [isResetLoading, setIsResetLoading] = useState(false);
+  const [isPhoneLoading, setIsPhoneLoading] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [showPhoneAuth, setShowPhoneAuth] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [otpCode, setOtpCode] = useState("");
+  const [otpSent, setOtpSent] = useState(false);
 
   const from = (location.state as any)?.from?.pathname || "/";
 
@@ -242,6 +247,68 @@ const Auth = () => {
     }
   };
 
+  const handleSendOTP = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!phoneNumber.trim() || phoneNumber.length < 10) {
+      toast.error("Please enter a valid phone number");
+      return;
+    }
+
+    setIsPhoneLoading(true);
+
+    try {
+      const formattedPhone = phoneNumber.startsWith('+') ? phoneNumber : `+91${phoneNumber}`;
+      
+      const { error } = await supabase.auth.signInWithOtp({
+        phone: formattedPhone,
+      });
+
+      if (error) {
+        toast.error(error.message);
+      } else {
+        toast.success("OTP sent successfully! Check your phone.");
+        setOtpSent(true);
+      }
+    } catch (error) {
+      toast.error("Failed to send OTP. Please try again.");
+    } finally {
+      setIsPhoneLoading(false);
+    }
+  };
+
+  const handleVerifyOTP = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!otpCode.trim() || otpCode.length < 6) {
+      toast.error("Please enter the 6-digit OTP");
+      return;
+    }
+
+    setIsPhoneLoading(true);
+
+    try {
+      const formattedPhone = phoneNumber.startsWith('+') ? phoneNumber : `+91${phoneNumber}`;
+      
+      const { error } = await supabase.auth.verifyOtp({
+        phone: formattedPhone,
+        token: otpCode,
+        type: 'sms',
+      });
+
+      if (error) {
+        toast.error(error.message);
+      } else {
+        toast.success("Phone verified successfully! Welcome to India Assist.");
+        navigate(from, { replace: true });
+      }
+    } catch (error) {
+      toast.error("Invalid OTP. Please try again.");
+    } finally {
+      setIsPhoneLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
       <InteractiveBackground />
@@ -341,7 +408,103 @@ const Auth = () => {
               </svg>
               {isAppleLoading ? "Connecting..." : "Continue with Apple"}
             </Button>
+
+            {/* Phone OTP Sign In Button */}
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => setShowPhoneAuth(true)}
+            >
+              <Phone className="w-5 h-5 mr-2" />
+              Continue with Phone
+            </Button>
           </div>
+
+          {/* Phone OTP Authentication */}
+          {showPhoneAuth && (
+            <Card className="border-primary/20 bg-muted/50">
+              <CardContent className="pt-4 space-y-4">
+                <div className="text-center mb-2">
+                  <h3 className="font-semibold">Phone Authentication</h3>
+                  <p className="text-sm text-muted-foreground">
+                    {otpSent ? "Enter the OTP sent to your phone" : "Enter your phone number to receive OTP"}
+                  </p>
+                </div>
+                
+                {!otpSent ? (
+                  <form onSubmit={handleSendOTP} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="phone-number">Phone Number</Label>
+                      <div className="relative">
+                        <Phone className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          id="phone-number"
+                          type="tel"
+                          placeholder="+91 XXXXXXXXXX"
+                          value={phoneNumber}
+                          onChange={(e) => setPhoneNumber(e.target.value)}
+                          className="pl-10"
+                          required
+                        />
+                      </div>
+                    </div>
+                    <Button type="submit" className="w-full" disabled={isPhoneLoading}>
+                      {isPhoneLoading ? "Sending OTP..." : "Send OTP"}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      className="w-full"
+                      onClick={() => setShowPhoneAuth(false)}
+                    >
+                      Cancel
+                    </Button>
+                  </form>
+                ) : (
+                  <form onSubmit={handleVerifyOTP} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="otp-code">Enter OTP</Label>
+                      <Input
+                        id="otp-code"
+                        type="text"
+                        placeholder="Enter 6-digit OTP"
+                        value={otpCode}
+                        onChange={(e) => setOtpCode(e.target.value)}
+                        maxLength={6}
+                        className="text-center text-lg tracking-widest"
+                        required
+                      />
+                    </div>
+                    <Button type="submit" className="w-full" disabled={isPhoneLoading}>
+                      {isPhoneLoading ? "Verifying..." : "Verify OTP"}
+                    </Button>
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="flex-1"
+                        onClick={() => {
+                          setOtpSent(false);
+                          setOtpCode("");
+                        }}
+                      >
+                        Change Number
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        className="flex-1"
+                        onClick={handleSendOTP}
+                        disabled={isPhoneLoading}
+                      >
+                        Resend OTP
+                      </Button>
+                    </div>
+                  </form>
+                )}
+              </CardContent>
+            </Card>
+          )}
 
           <div className="relative">
             <div className="absolute inset-0 flex items-center">
