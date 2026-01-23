@@ -7,7 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { User, Mail, Lock, Plane, Phone } from "lucide-react";
+import { User, Mail, Lock, Plane } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 import InteractiveBackground from "@/components/InteractiveBackground";
 
@@ -26,6 +27,7 @@ const Auth = () => {
   const [phoneNumber, setPhoneNumber] = useState("");
   const [otpCode, setOtpCode] = useState("");
   const [otpSent, setOtpSent] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
 
   const from = (location.state as any)?.from?.pathname || "/";
 
@@ -329,6 +331,20 @@ const Auth = () => {
                         required
                       />
                     </div>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="remember-me"
+                      checked={rememberMe}
+                      onCheckedChange={(checked) => setRememberMe(checked as boolean)}
+                    />
+                    <Label
+                      htmlFor="remember-me"
+                      className="text-sm font-normal cursor-pointer"
+                    >
+                      Remember me
+                    </Label>
                   </div>
                   
                   <Button type="submit" className="w-full" disabled={isLoading}>
