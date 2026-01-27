@@ -3,8 +3,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Send, Bot, User } from "lucide-react";
+import { Send, Bot, User, Mic, MicOff } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
 
 interface Message {
   role: "user" | "assistant";
@@ -23,9 +24,26 @@ const Chat = () => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
+  const { transcript, isListening, isSupported, startListening, stopListening } = useSpeechRecognition('en-US');
+
+  // Update input when speech recognition provides transcript
+  useEffect(() => {
+    if (transcript) {
+      setInput(prev => prev + (prev ? ' ' : '') + transcript);
+    }
+  }, [transcript]);
+
   useEffect(() => {
     scrollRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  const handleVoiceInput = () => {
+    if (isListening) {
+      stopListening();
+    } else {
+      startListening();
+    }
+  };
 
   const streamChat = async (userMessages: Message[]) => {
     const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
@@ -136,7 +154,7 @@ const Chat = () => {
       <div className="container mx-auto px-4 max-w-4xl">
         <div className="text-center mb-8">
           <h1 className="text-5xl font-bold mb-4">AI Travel Buddy</h1>
-          <p className="text-xl text-muted-foreground">Ask me anything about India!</p>
+          <p className="text-xl text-muted-foreground">Ask me anything about India! Use voice or type your question.</p>
         </div>
 
         <Card className="shadow-lg-custom h-[600px] flex flex-col">
@@ -144,6 +162,11 @@ const Chat = () => {
             <CardTitle className="flex items-center gap-2">
               <Bot className="h-5 w-5 text-primary" />
               Chat with Travel Buddy
+              {isSupported && (
+                <span className="ml-auto text-sm font-normal text-muted-foreground">
+                  🎤 Voice enabled
+                </span>
+              )}
             </CardTitle>
           </CardHeader>
           <CardContent className="flex-1 flex flex-col p-0">
@@ -186,11 +209,31 @@ const Chat = () => {
 
             <div className="p-4 border-t">
               <div className="flex gap-2">
-                <Input placeholder="Ask anything..." value={input} onChange={(e) => setInput(e.target.value)} onKeyPress={(e) => e.key === "Enter" && sendMessage()} disabled={isTyping} />
+                <Input 
+                  placeholder={isListening ? "Listening... speak now" : "Ask anything..."} 
+                  value={input} 
+                  onChange={(e) => setInput(e.target.value)} 
+                  onKeyPress={(e) => e.key === "Enter" && sendMessage()} 
+                  disabled={isTyping}
+                  className={isListening ? 'border-primary' : ''}
+                />
+                {isSupported && (
+                  <Button 
+                    variant={isListening ? "destructive" : "outline"} 
+                    size="icon"
+                    onClick={handleVoiceInput}
+                    disabled={isTyping}
+                  >
+                    {isListening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+                  </Button>
+                )}
                 <Button onClick={sendMessage} disabled={isTyping || !input.trim()}>
                   <Send className="h-4 w-4" />
                 </Button>
               </div>
+              {isListening && (
+                <p className="text-sm text-primary animate-pulse mt-2">🎤 Listening... Speak now</p>
+              )}
             </div>
           </CardContent>
         </Card>

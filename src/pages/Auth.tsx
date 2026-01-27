@@ -92,8 +92,20 @@ const Auth = () => {
     }
   };
 
+  const validateEmail = (email: string): boolean => {
+    // Comprehensive email validation regex
+    const emailRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
+    return emailRegex.test(email) && email.includes('.') && email.split('@')[1].includes('.');
+  };
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!validateEmail(email)) {
+      toast.error("Please enter a valid email address (e.g., user@example.com)");
+      return;
+    }
+
     setIsLoading(true);
 
     try {

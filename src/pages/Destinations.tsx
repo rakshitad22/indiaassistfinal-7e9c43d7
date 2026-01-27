@@ -1,9 +1,25 @@
+import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { MapPin, Utensils, Hotel } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { MapPin, Utensils, Hotel, Eye } from "lucide-react";
+import DestinationDetails from "@/components/DestinationDetails";
+
+interface Destination {
+  name: string;
+  location: string;
+  description: string;
+  image: string;
+  attractions: string[];
+  mapEmbed: string;
+  nearby: string[];
+}
 
 const Destinations = () => {
-  const destinations = [
+  const [selectedDestination, setSelectedDestination] = useState<Destination | null>(null);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+
+  const destinations: Destination[] = [
     {
       name: "Mumbai",
       location: "Maharashtra",
@@ -168,13 +184,18 @@ const Destinations = () => {
     },
   ];
 
+  const handleViewDetails = (destination: Destination) => {
+    setSelectedDestination(destination);
+    setIsDialogOpen(true);
+  };
+
   return (
     <div className="min-h-screen py-12">
       <div className="container mx-auto px-4">
         <div className="text-center mb-12">
           <h1 className="text-5xl font-bold mb-4">Explore India's Top Destinations</h1>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            Discover the most iconic and breathtaking places across Incredible India
+            Discover the most iconic and breathtaking places across Incredible India. Click on any destination for complete details!
           </p>
         </div>
 
@@ -209,11 +230,14 @@ const Destinations = () => {
                       Top Attractions
                     </h3>
                     <div className="flex flex-wrap gap-2">
-                      {destination.attractions.map((attraction, i) => (
+                      {destination.attractions.slice(0, 4).map((attraction, i) => (
                         <Badge key={i} variant="secondary">
                           {attraction}
                         </Badge>
                       ))}
+                      {destination.attractions.length > 4 && (
+                        <Badge variant="outline">+{destination.attractions.length - 4} more</Badge>
+                      )}
                     </div>
                   </div>
 
@@ -224,7 +248,7 @@ const Destinations = () => {
                       Nearby Restaurants & Hotels
                     </h3>
                     <ul className="space-y-1 text-sm text-muted-foreground">
-                      {destination.nearby.map((place, i) => (
+                      {destination.nearby.slice(0, 2).map((place, i) => (
                         <li key={i} className="flex items-center gap-2">
                           <Hotel className="h-3 w-3" />
                           {place}
@@ -233,24 +257,27 @@ const Destinations = () => {
                     </ul>
                   </div>
 
-                  {/* Map */}
-                  <div className="rounded-lg overflow-hidden border">
-                    <iframe
-                      src={destination.mapEmbed}
-                      width="100%"
-                      height="250"
-                      style={{ border: 0 }}
-                      allowFullScreen
-                      loading="lazy"
-                      referrerPolicy="no-referrer-when-downgrade"
-                    ></iframe>
-                  </div>
+                  {/* View Details Button */}
+                  <Button 
+                    onClick={() => handleViewDetails(destination)}
+                    className="w-full md:w-auto"
+                  >
+                    <Eye className="h-4 w-4 mr-2" />
+                    View Complete Details
+                  </Button>
                 </CardContent>
               </div>
             </Card>
           ))}
         </div>
       </div>
+
+      {/* Destination Details Modal */}
+      <DestinationDetails 
+        destination={selectedDestination}
+        open={isDialogOpen}
+        onOpenChange={setIsDialogOpen}
+      />
     </div>
   );
 };
