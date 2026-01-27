@@ -164,12 +164,12 @@ const Currency = () => {
             {result !== null && (
               <div className="p-6 bg-muted rounded-lg text-center animate-in fade-in slide-in-from-bottom-3">
                 <div className="text-sm text-muted-foreground mb-2">Converted Amount</div>
-                <div className="text-4xl font-bold text-primary mb-2">
+              <div className="text-4xl font-bold text-primary mb-2">
                   {currencies.find((c) => c.code === to)?.symbol}
-                  {result.toFixed(2)}
+                  {result.toFixed(4)}
                 </div>
                 <div className="text-sm text-muted-foreground">
-                  {amount} {from} = {result.toFixed(2)} {to}
+                  {amount} {from} = {result.toFixed(4)} {to}
                 </div>
                 {lastUpdated && (
                   <div className="text-xs text-muted-foreground mt-2">
