@@ -160,8 +160,7 @@ const Contact = () => {
                   </div>
                   <div>
                     <h3 className="font-semibold mb-1">Email Us</h3>
-                    <p className="text-sm text-muted-foreground">support@indiaassist.com</p>
-                    <p className="text-sm text-muted-foreground">info@indiaassist.com</p>
+                    <p className="text-sm text-muted-foreground">rakshitad76@gmail.com</p>
                   </div>
                 </div>
 
@@ -171,8 +170,7 @@ const Contact = () => {
                   </div>
                   <div>
                     <h3 className="font-semibold mb-1">Call Us</h3>
-                    <p className="text-sm text-muted-foreground">+91 1800-123-4567</p>
-                    <p className="text-sm text-muted-foreground">24/7 Support Available</p>
+                    <p className="text-sm text-muted-foreground">+917892308597</p>
                   </div>
                 </div>
 
@@ -183,8 +181,8 @@ const Contact = () => {
                   <div>
                     <h3 className="font-semibold mb-1">Visit Us</h3>
                     <p className="text-sm text-muted-foreground">
-                      Connaught Place<br />
-                      New Delhi, India 110001
+                      Sri Krishna Institute of Technology<br />
+                      Bangalore
                     </p>
                   </div>
                 </div>
