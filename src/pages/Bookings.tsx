@@ -861,12 +861,29 @@ const Bookings = () => {
   } = useRealBookings();
 
   const cities = Object.keys(hotelOptions);
+
+  // Get star range based on budget class
+  const getStarRangeForBudget = (budgetClass: string): number[] => {
+    switch (budgetClass) {
+      case "budget":
+        return [3]; // Budget shows 3-star hotels
+      case "middle":
+        return [4]; // Mid-Range shows 4-star hotels
+      case "luxury":
+        return [5]; // Luxury shows 5-star hotels
+      default:
+        return [3, 4, 5]; // Show all if not specified
+    }
+  };
   
   const filteredHotels = selectedCity 
-    ? hotelOptions[selectedCity].filter(hotel => 
-        selectedAmenities.length === 0 || 
-        selectedAmenities.every(amenity => hotel.amenities.includes(amenity))
-      )
+    ? hotelOptions[selectedCity].filter(hotel => {
+        const starRange = getStarRangeForBudget(formData.budgetClass);
+        const matchesBudget = starRange.includes(hotel.stars);
+        const matchesAmenities = selectedAmenities.length === 0 || 
+          selectedAmenities.every(amenity => hotel.amenities.includes(amenity));
+        return matchesBudget && matchesAmenities;
+      })
     : [];
 
   const toggleAmenity = (amenity: string) => {
