@@ -1,10 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import { authenticateRequest, corsHeaders, unauthorizedResponse, badRequestResponse } from "../_shared/auth.ts";
+import { validatePushRequest } from "../_shared/validation.ts";
 
 interface PushPayload {
   title: string;
@@ -14,13 +11,6 @@ interface PushPayload {
   tag?: string;
   data?: Record<string, unknown>;
   actions?: Array<{ action: string; title: string }>;
-}
-
-interface SendPushRequest {
-  action?: 'get-vapid-key' | 'send';
-  userId?: string;
-  payload?: PushPayload;
-  notificationType?: 'booking_confirmations' | 'booking_reminders' | 'price_alerts' | 'travel_tips' | 'promotional';
 }
 
 // Web Push implementation using raw crypto
@@ -101,7 +91,16 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const request: SendPushRequest = await req.json();
+    const body = await req.json();
+    
+    // Validate input
+    const validation = validatePushRequest(body);
+    if (!validation.success) {
+      return badRequestResponse(validation.error || "Invalid request");
+    }
+    
+    const request = validation.data!;
+    
     console.log("Push notification request:", request.action, "type:", request.notificationType);
 
     const vapidPublicKey = Deno.env.get("VAPID_PUBLIC_KEY");
@@ -115,7 +114,7 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Return VAPID public key for client subscription
+    // Return VAPID public key for client subscription - this is a public endpoint
     if (request.action === 'get-vapid-key') {
       return new Response(
         JSON.stringify({ vapidPublicKey }),
@@ -123,8 +122,26 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Send push notification
-    if (request.action === 'send' && request.userId && request.payload) {
+    // For sending notifications, require authentication
+    if (request.action === 'send') {
+      const auth = await authenticateRequest(req);
+      if (!auth) {
+        return unauthorizedResponse("Authentication required to send push notifications");
+      }
+
+      const userId = request.userId;
+      const payload = request.payload;
+      
+      if (!userId || !payload) {
+        return badRequestResponse("User ID and payload required for send action");
+      }
+
+      // Verify the user is sending to their own subscriptions
+      if (userId !== auth.userId) {
+        console.warn("User attempting to send push to different user:", { requesting: auth.userId, target: userId });
+        return unauthorizedResponse("Cannot send push notifications to other users");
+      }
+
       const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
       const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
       const supabase = createClient(supabaseUrl, supabaseKey);
@@ -134,7 +151,7 @@ const handler = async (req: Request): Promise<Response> => {
         const { data: preferences, error: prefError } = await supabase
           .from("notification_preferences")
           .select("*")
-          .eq("user_id", request.userId)
+          .eq("user_id", userId)
           .maybeSingle();
 
         if (prefError) {
@@ -153,7 +170,7 @@ const handler = async (req: Request): Promise<Response> => {
           }
 
           // Check if this specific notification type is enabled
-          const typeEnabled = preferences[request.notificationType];
+          const typeEnabled = preferences[request.notificationType as keyof typeof preferences];
           if (typeEnabled === false) {
             console.log(`Notification type ${request.notificationType} disabled by user preference`);
             return new Response(
@@ -168,7 +185,7 @@ const handler = async (req: Request): Promise<Response> => {
       const { data: subscriptions, error } = await supabase
         .from("push_subscriptions")
         .select("*")
-        .eq("user_id", request.userId);
+        .eq("user_id", userId);
 
       if (error) {
         console.error("Error fetching subscriptions:", error);
@@ -191,7 +208,7 @@ const handler = async (req: Request): Promise<Response> => {
       for (const sub of subscriptions) {
         const success = await sendWebPush(
           { endpoint: sub.endpoint, p256dh: sub.p256dh, auth: sub.auth },
-          request.payload,
+          payload as PushPayload,
           vapidPublicKey,
           vapidPrivateKey
         );

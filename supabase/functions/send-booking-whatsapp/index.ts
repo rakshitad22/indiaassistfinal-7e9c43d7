@@ -1,28 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-};
-
-interface BookingWhatsAppRequest {
-  phoneNumber: string;
-  bookingType: "hotel" | "flight" | "cab";
-  bookingDetails: {
-    name?: string;
-    destination?: string;
-    origin?: string;
-    checkIn?: string;
-    checkOut?: string;
-    departureDate?: string;
-    returnDate?: string;
-    price?: string;
-    hotelName?: string;
-    airline?: string;
-    bookingId?: string;
-  };
-}
+import { authenticateRequest, corsHeaders, unauthorizedResponse, badRequestResponse } from "../_shared/auth.ts";
+import { validateSmsRequest, sanitizeString } from "../_shared/validation.ts";
 
 const handler = async (req: Request): Promise<Response> => {
   // Handle CORS preflight requests
@@ -31,7 +9,21 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const { phoneNumber, bookingType, bookingDetails }: BookingWhatsAppRequest = await req.json();
+    // Authenticate request
+    const auth = await authenticateRequest(req);
+    if (!auth) {
+      return unauthorizedResponse("Authentication required to send WhatsApp message");
+    }
+
+    const body = await req.json();
+    
+    // Validate input - reuse SMS validation as structure is similar
+    const validation = validateSmsRequest(body);
+    if (!validation.success) {
+      return badRequestResponse(validation.error || "Invalid request");
+    }
+    
+    const { phoneNumber, bookingType, bookingDetails } = validation.data!;
 
     const accountSid = Deno.env.get("TWILIO_ACCOUNT_SID");
     const authToken = Deno.env.get("TWILIO_AUTH_TOKEN");
@@ -41,14 +33,26 @@ const handler = async (req: Request): Promise<Response> => {
       throw new Error("Twilio credentials not configured");
     }
 
+    // Sanitize booking details for message
+    const destination = sanitizeString(String(bookingDetails.destination || ""));
+    const hotelName = sanitizeString(String(bookingDetails.hotelName || "Your Hotel"));
+    const origin = sanitizeString(String(bookingDetails.origin || ""));
+    const checkIn = sanitizeString(String(bookingDetails.checkIn || ""));
+    const checkOut = sanitizeString(String(bookingDetails.checkOut || ""));
+    const departureDate = sanitizeString(String(bookingDetails.departureDate || ""));
+    const returnDate = sanitizeString(String(bookingDetails.returnDate || ""));
+    const price = sanitizeString(String(bookingDetails.price || ""));
+    const airline = sanitizeString(String(bookingDetails.airline || ""));
+    const bookingId = sanitizeString(String(bookingDetails.bookingId || ""));
+
     // Format the WhatsApp message based on booking type
     let message = "";
     if (bookingType === "hotel") {
-      message = `🏨 *Booking Confirmed!*\n\n*Hotel:* ${bookingDetails.hotelName || "Your Hotel"}\n*Destination:* ${bookingDetails.destination}\n*Check-in:* ${bookingDetails.checkIn}\n*Check-out:* ${bookingDetails.checkOut}\n*Total:* ${bookingDetails.price}\n*Booking ID:* ${bookingDetails.bookingId}\n\nThank you for booking with TravelEase! 🎉`;
+      message = `🏨 *Booking Confirmed!*\n\n*Hotel:* ${hotelName}\n*Destination:* ${destination}\n*Check-in:* ${checkIn}\n*Check-out:* ${checkOut}\n*Total:* ${price}\n*Booking ID:* ${bookingId}\n\nThank you for booking with TravelEase! 🎉`;
     } else if (bookingType === "flight") {
-      message = `✈️ *Flight Booking Confirmed!*\n\n${bookingDetails.airline ? `*Airline:* ${bookingDetails.airline}\n` : ""}*Route:* ${bookingDetails.origin} → ${bookingDetails.destination}\n*Departure:* ${bookingDetails.departureDate}${bookingDetails.returnDate ? `\n*Return:* ${bookingDetails.returnDate}` : ""}\n*Total:* ${bookingDetails.price}\n*Booking ID:* ${bookingDetails.bookingId}\n\nThank you for booking with TravelEase! 🎉`;
+      message = `✈️ *Flight Booking Confirmed!*\n\n${airline ? `*Airline:* ${airline}\n` : ""}*Route:* ${origin} → ${destination}\n*Departure:* ${departureDate}${returnDate ? `\n*Return:* ${returnDate}` : ""}\n*Total:* ${price}\n*Booking ID:* ${bookingId}\n\nThank you for booking with TravelEase! 🎉`;
     } else {
-      message = `🚗 *Cab Booking Confirmed!*\n\n*Pickup:* ${bookingDetails.origin}\n*Destination:* ${bookingDetails.destination}\n*Date:* ${bookingDetails.departureDate}\n*Total:* ${bookingDetails.price}\n*Booking ID:* ${bookingDetails.bookingId}\n\nThank you for booking with TravelEase! 🎉`;
+      message = `🚗 *Cab Booking Confirmed!*\n\n*Pickup:* ${origin}\n*Destination:* ${destination}\n*Date:* ${departureDate}\n*Total:* ${price}\n*Booking ID:* ${bookingId}\n\nThank you for booking with TravelEase! 🎉`;
     }
 
     // Format phone number for WhatsApp (needs to include country code without +)
@@ -56,6 +60,8 @@ const handler = async (req: Request): Promise<Response> => {
     if (!formattedPhone.startsWith('91')) {
       formattedPhone = '91' + formattedPhone;
     }
+
+    console.log("Sending WhatsApp message for user:", auth.userId);
 
     // Send WhatsApp message via Twilio API
     const twilioUrl = `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`;

@@ -1,9 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import { authenticateRequest, corsHeaders, unauthorizedResponse, badRequestResponse } from "../_shared/auth.ts";
+import { validateTranslateRequest } from "../_shared/validation.ts";
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -11,7 +8,21 @@ serve(async (req) => {
   }
 
   try {
-    const { text, targetLanguage } = await req.json();
+    // Authenticate request
+    const auth = await authenticateRequest(req);
+    if (!auth) {
+      return unauthorizedResponse("Authentication required for translation");
+    }
+
+    const body = await req.json();
+    
+    // Validate input
+    const validation = validateTranslateRequest(body);
+    if (!validation.success) {
+      return badRequestResponse(validation.error || "Invalid request");
+    }
+    
+    const { text, targetLanguage } = validation.data!;
 
     const languageNames: Record<string, string> = {
       'en': 'English',
