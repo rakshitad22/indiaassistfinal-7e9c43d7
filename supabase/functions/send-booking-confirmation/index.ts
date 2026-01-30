@@ -1,32 +1,9 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { Resend } from "https://esm.sh/resend@2.0.0";
+import { authenticateRequest, corsHeaders, unauthorizedResponse, badRequestResponse } from "../_shared/auth.ts";
+import { validateBookingEmailRequest } from "../_shared/validation.ts";
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-};
-
-interface BookingEmailRequest {
-  email: string;
-  name: string;
-  bookingType: "hotel" | "cab" | "flight";
-  bookingId: string;
-  pnr?: string;
-  destination: string;
-  date: string;
-  returnDate?: string;
-  guests: string;
-  hotel?: string;
-  cabType?: string;
-  pickup?: string;
-  flightClass?: string;
-  fare: number;
-  taxes: number;
-  total: number;
-}
 
 const handler = async (req: Request): Promise<Response> => {
   // Handle CORS preflight requests
@@ -35,8 +12,23 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const booking: BookingEmailRequest = await req.json();
-    console.log("Sending booking confirmation email to:", booking.email);
+    // Authenticate request
+    const auth = await authenticateRequest(req);
+    if (!auth) {
+      return unauthorizedResponse("Authentication required to send booking confirmation");
+    }
+
+    const body = await req.json();
+    
+    // Validate input
+    const validation = validateBookingEmailRequest(body);
+    if (!validation.success) {
+      return badRequestResponse(validation.error || "Invalid request");
+    }
+    
+    const booking = validation.data!;
+    
+    console.log("Sending booking confirmation email to:", booking.email, "for user:", auth.userId);
 
     const bookingTypeLabel = booking.bookingType === "hotel" ? "Hotel" : 
                              booking.bookingType === "flight" ? "Flight" : "Cab";

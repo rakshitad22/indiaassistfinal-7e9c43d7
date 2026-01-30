@@ -1,9 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import { authenticateRequest, corsHeaders, unauthorizedResponse, badRequestResponse } from "../_shared/auth.ts";
+import { validateHotelSearchRequest } from "../_shared/validation.ts";
 
 const AMADEUS_API_KEY = Deno.env.get('AMADEUS_API_KEY');
 const AMADEUS_API_SECRET = Deno.env.get('AMADEUS_API_SECRET');
@@ -90,9 +87,23 @@ serve(async (req) => {
   }
 
   try {
-    const { cityName, checkInDate, checkOutDate, adults, rooms } = await req.json();
+    // Authenticate request
+    const auth = await authenticateRequest(req);
+    if (!auth) {
+      return unauthorizedResponse("Authentication required to search hotels");
+    }
+
+    const body = await req.json();
     
-    console.log('Search request:', { cityName, checkInDate, checkOutDate, adults, rooms });
+    // Validate input
+    const validation = validateHotelSearchRequest(body);
+    if (!validation.success) {
+      return badRequestResponse(validation.error || "Invalid request");
+    }
+    
+    const { cityName, checkInDate, checkOutDate, adults, rooms } = validation.data!;
+    
+    console.log('Search request:', { cityName, checkInDate, checkOutDate, adults, rooms, userId: auth.userId });
 
     if (!AMADEUS_API_KEY || !AMADEUS_API_SECRET) {
       console.error('Amadeus API credentials not configured');

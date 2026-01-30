@@ -1,9 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import { authenticateRequest, corsHeaders, unauthorizedResponse, badRequestResponse } from "../_shared/auth.ts";
+import { validateFlightSearchRequest } from "../_shared/validation.ts";
 
 const AMADEUS_API_KEY = Deno.env.get('AMADEUS_API_KEY');
 const AMADEUS_API_SECRET = Deno.env.get('AMADEUS_API_SECRET');
@@ -77,9 +74,23 @@ serve(async (req) => {
   }
 
   try {
-    const { origin, destination, departureDate, returnDate, adults, travelClass } = await req.json();
+    // Authenticate request
+    const auth = await authenticateRequest(req);
+    if (!auth) {
+      return unauthorizedResponse("Authentication required to search flights");
+    }
+
+    const body = await req.json();
     
-    console.log('Flight search:', { origin, destination, departureDate, returnDate, adults, travelClass });
+    // Validate input
+    const validation = validateFlightSearchRequest(body);
+    if (!validation.success) {
+      return badRequestResponse(validation.error || "Invalid request");
+    }
+    
+    const { origin, destination, departureDate, returnDate, adults, travelClass } = validation.data!;
+    
+    console.log('Flight search:', { origin, destination, departureDate, returnDate, adults, travelClass, userId: auth.userId });
 
     if (!AMADEUS_API_KEY || !AMADEUS_API_SECRET) {
       return new Response(

@@ -1,27 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-};
-
-interface BookingSmsRequest {
-  phoneNumber: string;
-  bookingType: "hotel" | "flight";
-  bookingDetails: {
-    name?: string;
-    destination?: string;
-    origin?: string;
-    checkIn?: string;
-    checkOut?: string;
-    departureDate?: string;
-    returnDate?: string;
-    price?: string;
-    hotelName?: string;
-    airline?: string;
-  };
-}
+import { authenticateRequest, corsHeaders, unauthorizedResponse, badRequestResponse } from "../_shared/auth.ts";
+import { validateSmsRequest, sanitizeString } from "../_shared/validation.ts";
 
 const handler = async (req: Request): Promise<Response> => {
   // Handle CORS preflight requests
@@ -30,7 +9,21 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const { phoneNumber, bookingType, bookingDetails }: BookingSmsRequest = await req.json();
+    // Authenticate request
+    const auth = await authenticateRequest(req);
+    if (!auth) {
+      return unauthorizedResponse("Authentication required to send SMS");
+    }
+
+    const body = await req.json();
+    
+    // Validate input
+    const validation = validateSmsRequest(body);
+    if (!validation.success) {
+      return badRequestResponse(validation.error || "Invalid request");
+    }
+    
+    const { phoneNumber, bookingType, bookingDetails } = validation.data!;
 
     const accountSid = Deno.env.get("TWILIO_ACCOUNT_SID");
     const authToken = Deno.env.get("TWILIO_AUTH_TOKEN");
@@ -40,13 +33,26 @@ const handler = async (req: Request): Promise<Response> => {
       throw new Error("Twilio credentials not configured");
     }
 
+    // Sanitize booking details for message
+    const destination = sanitizeString(String(bookingDetails.destination || ""));
+    const hotelName = sanitizeString(String(bookingDetails.hotelName || "Your Hotel"));
+    const origin = sanitizeString(String(bookingDetails.origin || ""));
+    const checkIn = sanitizeString(String(bookingDetails.checkIn || ""));
+    const checkOut = sanitizeString(String(bookingDetails.checkOut || ""));
+    const departureDate = sanitizeString(String(bookingDetails.departureDate || ""));
+    const returnDate = sanitizeString(String(bookingDetails.returnDate || ""));
+    const price = sanitizeString(String(bookingDetails.price || ""));
+    const airline = sanitizeString(String(bookingDetails.airline || ""));
+
     // Format the message based on booking type
     let message = "";
     if (bookingType === "hotel") {
-      message = `🏨 Booking Confirmed!\n\nHotel: ${bookingDetails.hotelName || "Your Hotel"}\nDestination: ${bookingDetails.destination}\nCheck-in: ${bookingDetails.checkIn}\nCheck-out: ${bookingDetails.checkOut}\nPrice: ${bookingDetails.price}\n\nThank you for booking with TravelEase!`;
+      message = `🏨 Booking Confirmed!\n\nHotel: ${hotelName}\nDestination: ${destination}\nCheck-in: ${checkIn}\nCheck-out: ${checkOut}\nPrice: ${price}\n\nThank you for booking with TravelEase!`;
     } else {
-      message = `✈️ Flight Booking Confirmed!\n\n${bookingDetails.airline ? `Airline: ${bookingDetails.airline}\n` : ""}Route: ${bookingDetails.origin} → ${bookingDetails.destination}\nDeparture: ${bookingDetails.departureDate}${bookingDetails.returnDate ? `\nReturn: ${bookingDetails.returnDate}` : ""}\nPrice: ${bookingDetails.price}\n\nThank you for booking with TravelEase!`;
+      message = `✈️ Flight Booking Confirmed!\n\n${airline ? `Airline: ${airline}\n` : ""}Route: ${origin} → ${destination}\nDeparture: ${departureDate}${returnDate ? `\nReturn: ${returnDate}` : ""}\nPrice: ${price}\n\nThank you for booking with TravelEase!`;
     }
+
+    console.log("Sending SMS for user:", auth.userId);
 
     // Send SMS via Twilio API
     const twilioUrl = `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`;

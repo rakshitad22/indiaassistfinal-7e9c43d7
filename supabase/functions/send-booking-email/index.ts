@@ -1,19 +1,15 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { Resend } from "https://esm.sh/resend@2.0.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { authenticateRequest, corsHeaders, unauthorizedResponse, badRequestResponse } from "../_shared/auth.ts";
+import { validateBookingEmailRequest } from "../_shared/validation.ts";
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
-
-interface BookingEmailProps {
-  userId?: string;
+// Generate rich HTML email template
+function generateBookingEmailHtml(booking: {
   name: string;
-  email: string;
-  bookingType: "hotel" | "cab" | "flight";
+  bookingType: string;
   bookingId: string;
   pnr?: string;
   destination: string;
@@ -27,11 +23,7 @@ interface BookingEmailProps {
   fare: number;
   taxes: number;
   total: number;
-  notificationType?: 'booking_confirmations' | 'booking_reminders' | 'price_alerts' | 'travel_tips' | 'promotional';
-}
-
-// Generate rich HTML email template
-function generateBookingEmailHtml(booking: BookingEmailProps): string {
+}): string {
   const bookingTypeLabel = booking.bookingType === "hotel" ? "Hotel" : 
                            booking.bookingType === "flight" ? "Flight" : "Cab";
   const bookingTypeEmoji = booking.bookingType === "hotel" ? "🏨" : 
@@ -180,11 +172,29 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const booking: BookingEmailProps = await req.json();
-    console.log("Processing email request for:", booking.email, "type:", booking.notificationType);
+    // Authenticate request
+    const auth = await authenticateRequest(req);
+    if (!auth) {
+      return unauthorizedResponse("Authentication required to send booking email");
+    }
+
+    const body = await req.json();
+    
+    // Validate input
+    const validation = validateBookingEmailRequest(body);
+    if (!validation.success) {
+      return badRequestResponse(validation.error || "Invalid request");
+    }
+    
+    const booking = validation.data!;
+    
+    console.log("Processing email request for:", booking.email, "type:", booking.notificationType, "user:", auth.userId);
+
+    // Verify the user is sending email to their own address (or use their own userId)
+    const userId = booking.userId || auth.userId;
 
     // Check user's notification preferences if userId is provided
-    if (booking.userId) {
+    if (userId) {
       const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
       const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
       const supabase = createClient(supabaseUrl, supabaseKey);
@@ -192,7 +202,7 @@ const handler = async (req: Request): Promise<Response> => {
       const { data: preferences, error: prefError } = await supabase
         .from("notification_preferences")
         .select("*")
-        .eq("user_id", booking.userId)
+        .eq("user_id", userId)
         .maybeSingle();
 
       if (prefError) {
@@ -212,7 +222,7 @@ const handler = async (req: Request): Promise<Response> => {
 
         // Check if this specific notification type is enabled
         const notificationType = booking.notificationType || 'booking_confirmations';
-        const typeEnabled = preferences[notificationType];
+        const typeEnabled = preferences[notificationType as keyof typeof preferences];
         if (typeEnabled === false) {
           console.log(`Notification type ${notificationType} disabled by user preference`);
           return new Response(

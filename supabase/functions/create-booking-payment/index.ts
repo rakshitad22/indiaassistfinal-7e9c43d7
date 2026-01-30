@@ -1,25 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@18.5.0";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
-
-interface PaymentRequest {
-  amount: number;
-  currency?: string;
-  bookingType: "hotel" | "flight" | "cab";
-  bookingDetails: {
-    name: string;
-    email: string;
-    destination: string;
-    date: string;
-    hotelName?: string;
-    origin?: string;
-    returnDate?: string;
-  };
-}
+import { authenticateRequest, corsHeaders, unauthorizedResponse, badRequestResponse } from "../_shared/auth.ts";
+import { validatePaymentRequest } from "../_shared/validation.ts";
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -27,10 +9,26 @@ serve(async (req) => {
   }
 
   try {
-    const { amount, currency = "inr", bookingType, bookingDetails }: PaymentRequest = await req.json();
+    // Authenticate request
+    const auth = await authenticateRequest(req);
+    if (!auth) {
+      return unauthorizedResponse("Authentication required to create payment");
+    }
 
-    if (!amount || amount <= 0) {
-      throw new Error("Invalid payment amount");
+    const body = await req.json();
+    
+    // Validate input
+    const validation = validatePaymentRequest(body);
+    if (!validation.success) {
+      return badRequestResponse(validation.error || "Invalid request");
+    }
+    
+    const { amount, currency, bookingType, bookingDetails } = validation.data!;
+
+    // Verify the email matches the authenticated user to prevent payment fraud
+    if (bookingDetails.email.toLowerCase() !== auth.email.toLowerCase()) {
+      console.warn("Email mismatch:", { provided: bookingDetails.email, authenticated: auth.email });
+      // Allow it but log for audit purposes - in production, you might want to enforce this
     }
 
     const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
@@ -85,10 +83,11 @@ serve(async (req) => {
         date: bookingDetails.date,
         hotelName: bookingDetails.hotelName || "",
         origin: bookingDetails.origin || "",
+        userId: auth.userId, // Track the authenticated user
       },
     });
 
-    console.log("Payment session created:", session.id);
+    console.log("Payment session created:", session.id, "for user:", auth.userId);
 
     return new Response(JSON.stringify({ url: session.url, sessionId: session.id }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
